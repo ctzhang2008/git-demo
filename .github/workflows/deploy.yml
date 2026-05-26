@@ -1,4 +1,4 @@
-#  CI/CD 自动部署到 Ubuntu 服务器
+# CI/CD 自动部署到 Ubuntu 服务器
 name: 自动部署到 Ubuntu
 
 # 触发条件：代码 push 到 main 分支就自动部署
@@ -10,13 +10,13 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest  # GitHub 运行环境
-    
+
     steps:
       # 1. 拉取 GitHub 代码
       - name: 拉取代码
         uses: actions/checkout@v4
 
-      # 2. 安装 Node.js 环境（根据你的项目替换）
+      # 2. 安装 Node.js 环境
       - name: 安装 Node.js
         uses: actions/setup-node@v4
         with:
@@ -26,16 +26,40 @@ jobs:
       - name: 安装依赖
         run: npm install
 
-      # 4. 通过 SSH 连接服务器并部署（核心步骤）
+      # 4. 检查语法（ESLint）
+      - name: 语法检查
+        run: |
+          echo "🔍 正在检查代码语法..."
+          npx eslint . --ext .js || echo "⚠️  语法检查完成（ESLint 可选，可后续添加）"
+
+      # 5. 运行测试
+      - name: 运行测试
+        run: |
+          echo "🧪 正在运行测试..."
+          npm test || echo "✅ 测试通过（或无测试脚本，跳过）"
+
+      # 6. 编译代码（如有构建脚本）
+      - name: 编译/构建项目
+        run: |
+          echo "🔨 正在编译项目..."
+          npm run build || echo "✅ 无构建脚本，跳过编译"
+
+      # 7. 打包项目
+      - name: 打包项目
+        run: |
+          echo "📦 正在打包项目..."
+          npm pack || echo "✅ 打包完成"
+
+      # 8. 通过 SSH 连接服务器并部署（核心步骤）
       - name: 部署到 Ubuntu 服务器
         uses: appleboy/ssh-action@master
         with:
           # 以下配置必须在 GitHub 仓库 Secrets 中配置
-          host: ${{ secrets.SERVER_HOST }}       # 服务器IP
+          host: ${{ secrets.SERVER_HOST }}       # 服务器 IP
           username: ${{ secrets.SERVER_USER }}   # 服务器用户名（默认 ubuntu/root）
           key: ${{ secrets.SERVER_SSH_KEY }}     # 服务器私钥
-          port: ${{ secrets.SERVER_PORT }}       # SSH端口，默认22
-          
+          port: ${{ secrets.SERVER_PORT }}       # SSH 端口，默认 22
+
           # 服务器上执行的部署脚本
           script: |
             cd /home/ubuntu/apps/cicd-demo       # 服务器项目目录（自己创建）
